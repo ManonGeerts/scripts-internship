@@ -1,0 +1,39 @@
+
+#!/bin/bash
+
+#PBS -N cat
+#PBS -L tasks=1:lprocs=1:memory=10gb
+#PBS -l walltime=10:00:00
+
+cd "$PBS_O_WORKDIR"
+
+
+module load SAMtools
+module load GATK
+module load fastp
+
+
+DIR="/scratch/antwerpen/206/vsc20612/mapped_data/"
+REGEX="[^/]*$"
+
+for f in $DIR*.sorted.bam
+
+do
+        SAMPLE=$(echo ${f%%.*} | grep -oP "$REGEX")
+        #echo "SAMPLE: $SAMPLE "
+	UNM=$(samtools view -c -f 4 $f)
+	#echo "UNMAPPED READS: $UNM"
+	R1=$(gzip -cd $SAMPLE.reads1.trimmed.fq.gz | grep -c '^@DP')
+	R2=$(gzip -cd $SAMPLE.reads2.trimmed.fq.gz | grep -c '^@DP')
+	PASSED=$((R1+R2))
+        NPASSED=$((UNM-PASSED))
+        echo $SAMPLE "not_passed" $NPASSED >> trim.stat.BGI.txt
+        echo $SAMPLE "passed" $PASSED >> trim.stat.BGI.txt
+done
+
+sed -i '/Fontem/d' trim.stat.BGI.txt
+sed -i '/1829/d' trim.stat.BGI.txt
+sed -i '/PTAG/d' trim.stat.BGI.txt
+sed -i '/KP33/d' trim.stat.BGI.txt
+sed -i '/TSW_/d' trim.stat.BGI.txt
+

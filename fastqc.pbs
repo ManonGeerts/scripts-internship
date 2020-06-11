@@ -1,0 +1,24 @@
+#!/bin/bash
+#PBS -N cat
+#PBS -L tasks=1:lprocs=1:memory=10gb
+#PBS -l walltime=10:00:00
+
+cd "$PBS_O_WORKDIR"
+
+##### SET VARIABLE BEFORE SUBMITTING JOB !!!
+DIR="/scratch/antwerpen/206/vsc20612/mapped_data/"
+#for f in $DIR*.sorted.bam; do qsub -v inputfile=$f -N FASTQC.$(echo ${f%%.*}) fastqc.pbs; done
+
+##### JOB
+module load Java
+
+DIR="/scratch/antwerpen/206/vsc20612/mapped_data/"
+REGEX="[^/]*$"
+SAMPLE=$(echo $DIR$inputfile | grep -oP "$REGEX")
+
+fastqc=/scratch/antwerpen/grp/aitg/tools/FastQC/fastqc
+
+echo "Processing $SAMPLE with filename $inputfile"
+$fastqc $inputfile --outdir=$DIR/fastqc/
+
+mv *.e* *.o* outputfiles/

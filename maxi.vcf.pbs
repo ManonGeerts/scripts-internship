@@ -1,0 +1,53 @@
+#!/bin/bash
+
+#PBS -N cat
+#PBS -L tasks=1:lprocs=1:memory=30gb
+#PBS -l walltime=05:00:00
+
+cd "$PBS_O_WORKDIR"
+
+#while read line; do qsub -N $line maxi.vcf.pbs;done < list.isolates
+
+SCRATCH='/scratch/antwerpen/206/vsc20612'
+SAMPLE=$PBS_JOBNAME
+REF="maxicircle_Tbrucei_M94286.fa"
+INDEX="M94286"
+reads1="$SCRATCH/komics/komics_BGI/$SAMPLE.reads1.trimmed.fq.gz"
+reads2="$SCRATCH/komics/komics_BGI/$SAMPLE.reads2.trimmed.fq.gz"
+
+module load SMALT
+module load SAMtools
+module load GATK
+
+##### GENERATE A HASH INDEX FOR THE REFERENCE GENOME 
+#smalt index -k 6 -s 2 M94286 $REF  
+
+#### MAP FILE TO REFERENCE GENOME
+#smalt map -i 1500 -y 0.80 -x -r 0 -n 8 -o $SAMPLE.UNMR.TR.maxi.sam $INDEX $reads1 $reads2
+
+##### CONVERT TO BAM FILES AND SORT
+#samtools sort -O bam -@ 8 -o $SAMPLE.UNMR.TR.maxi.sorted.bam $SAMPLE.UNMR.TR.maxi.sam
+#samtools depth -a $SAMPLE.UNMR.TR.maxi.sorted.bam | gzip > $SAMPLE.UNMR.TR.maxi.sorted.depth.gz
+
+##### ADD READ GROUPS AND MARK DUPLICATES
+
+BGI="DP8400009737BLL1"
+#gatk AddOrReplaceReadGroups -I $SAMPLE.UNMR.TR.maxi.sorted.bam -O $SAMPLE.UNMR.TR.maxi.sorted.RG.bam -ID $BGI -PL BGI -LB $SAMPLE -SM $SAMPLE -PU $BGI
+#gatk MarkDuplicates -I $SAMPLE.UNMR.TR.maxi.sorted.RG.bam -O $SAMPLE.UNMR.TR.maxi.markdup.bam -M $SAMPLE.UNMR.TR.maxi.markdup.metrics.txt --READ_NAME_REGEX=null
+
+##### CREATE INDEX OF SAMPLE FILES 
+#samtools index -@ 8 $SAMPLE.UNMR.TR.maxi.markdup.bam
+
+##### RUN HAPLOTYPECALLER
+#gatk HaplotypeCaller -R $REF -I $SAMPLE.UNMR.TR.maxi.markdup.bam -ERC GVCF -O $SAMPLE.UNMR.TR.maxi.g.vcf.gz -bamout $SAMPLE.UNMR.TR.maxi.vcf.bam
+
+#find -name "*g.vcf.gz" > input.list
+
+gatk CombineGVCFs -R $REF --variant input.list -O combined.g.vcf.gz
+gatk GenotypeGVCFs -R $REF --V combined.g.vcf.gz -O combined.genotyped.vcf
+gatk SelectVariants -R $REF -V combined.genotyped.vcf -select-type SNP -O combined.genotyped.SNP.vcf
+gatk VariantFiltration -R $REF -V combined.genotyped.SNP.vcf --filter-expression 'QUAL<500' --filter-name \
+       'LowQual' --filter-expression 'DP<5' --filter-name 'LowDepth' \
+        --filter-name 'FAIL' --filter-expression 'QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0' \
+        --cluster-window-size 10 -O combined.genotyped.SNP.filtered.vcf
+

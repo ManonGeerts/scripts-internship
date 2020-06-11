@@ -1,0 +1,159 @@
+#!/bin/bash
+
+#PBS -N cat
+#PBS -L tasks=1:lprocs=1:memory=10gb
+#PBS -l walltime=10:00:00
+
+cd "$PBS_O_WORKDIR"
+
+###################### DATA PREP UNMAPPED READS
+###### SET DIR VARIABLE BEFORE SUBMITTING !!!
+DIR="/scratch/antwerpen/206/vsc20612/mapped_data/"
+#for f in $DIR*.sorted.bam; do qsub -v inputfile=$f -N DATAPREP.$(echo ${f%%.*}) komics.pbs; done
+
+module load SAMtools
+module load GATK
+module load fastp
+module load MEGAHIT
+module load VSEARCH 
+module load BLAST+
+module load Python
+
+#ls $DIR
+#echo "Inputfile: "
+#read inputfile
+
+REGEX="[^/]*$"
+SAMPLE=$(echo ${inputfile%%.*} | grep -oP "$REGEX")
+samtools view -b -f 4 -o $SAMPLE.unmapped.reads.bam $DIR$SAMPLE.sorted.bam
+#gatk SamToFastq -I $SAMPLE.unmapped.reads.bam -F $SAMPLE.reads1.fq.gz -F2 $SAMPLE.reads2.fq.gz
+#fastp -i $SAMPLE.reads1.fq.gz -I $SAMPLE.reads2.fq.gz \
+#	-o $SAMPLE.reads1.trimmed.fq.gz -O $SAMPLE.reads2.trimmed.fq.gz \
+#	-q 30 -u 10 -5 -3 -W 1 -M 30 --cut_right --cut_right_window_size 10 --cut_right_mean_quality 30 -l 100 -b 150
+#rm $SAMPLE.unmapped.reads.bam
+
+
+###################### DATA PREP ALL READS
+#SAMPLE=$PBS_JOBNAME
+#DIR="/scratch/antwerpen/206/vsc20612/raw_data/$SAMPLE"
+#SCRATCH="/scratch/antwerpen/206/vsc20612/"
+#READS1="$DIR/*1.fq.gz"
+#READS2="$DIR/*2.fq.gz"
+#fastp -i $READS1 -I $READS2 \
+#        -o $SAMPLE.all.reads1.trimmed.fq.gz -O $SAMPLE.all.reads2.trimmed.fq.gz \
+#        -q 30 -u 10 -5 -3 -W 1 -M 30 --cut_right --cut_right_window_size 10 --cut_right_mean_quality 30 -l 100 -b 150
+
+
+##################### KOMICS ASSEMBLE UNMAPPED READS DIFFERENT RUNS
+#SAMPLE=$PBS_JOBNAME
+#komics assemble --kmin 79 --kmax 139 --kstep 10 $SAMPLE.UNMR.R1 $SAMPLE.reads1.trimmed.fq.gz $SAMPLE.reads2.trimmed.fq.gz
+#komics assemble --kmin 49 --kmax 139 --kstep 10 $SAMPLE.UNMR.R2 $SAMPLE.reads1.trimmed.fq.gz $SAMPLE.reads2.trimmed.fq.gz
+#komics assemble --kmin 49 --kmax 69 --kstep 10 $SAMPLE.UNMR.R3 $SAMPLE.reads1.trimmed.fq.gz $SAMPLE.reads2.trimmed.fq.gz
+#komics assemble --kmin 99 --kmax 119 --kstep 10 $SAMPLE.UNMR.R4 $SAMPLE.reads1.trimmed.fq.gz $SAMPLE.reads2.trimmed.fq.gz
+#komics assemble --kmin 99 --kmax 129 --kstep 10 $SAMPLE.UNMR.R5 $SAMPLE.reads1.trimmed.fq.gz $SAMPLE.reads2.trimmed.fq.gz
+
+
+##################### KOMICS CIRCULARIZE UNMAPPED READS DIFFERENT RUNS
+#komics circularize $SAMPLE.UNMR.R1 tmp.$SAMPLE.UNMR.R1.csb3contigs.fasta
+#komics circularize $SAMPLE.UNMR.R2 tmp.$SAMPLE.UNMR.R2.csb3contigs.fasta
+#komics circularize $SAMPLE.UNMR.R3 tmp.$SAMPLE.UNMR.R3.csb3contigs.fasta
+#komics circularize $SAMPLE.UNMR.R4 tmp.$SAMPLE.UNMR.R4.csb3contigs.fasta
+#komics circularize $SAMPLE.UNMR.R5 tmp.$SAMPLE.UNMR.R5.csb3contigs.fasta
+
+
+##################### KOMICS POLISH UNMAPPED READS DIFFERENT RUNS
+#komics polish --minidentity 97 $SAMPLE.UNMR.R1 tmp.$SAMPLE.UNMR.R1.circularized.fasta
+#komics polish --minidentity 97 $SAMPLE.UNMR.R2 tmp.$SAMPLE.UNMR.R2.circularized.fasta
+#komics polish --minidentity 97 $SAMPLE.UNMR.R3 tmp.$SAMPLE.UNMR.R3.circularized.fasta
+#komics polish --minidentity 97 $SAMPLE.UNMR.R4 tmp.$SAMPLE.UNMR.R4.circularized.fasta
+#komics polish --minidentity 97 $SAMPLE.UNMR.R5 tmp.$SAMPLE.UNMR.R5.circularized.fasta
+
+#echo "=========================================================================================="
+
+#for i in $SAMPLE.UNMR.R*.mini*
+#do
+#	echo $i
+#	echo "---------------------------------------------"
+#	echo "Number of minicircles: $(grep -c '>' $i)" 
+#	echo "Number of circularized minicircles: $(grep -c '_circularized' $i)"
+#	echo "---------------------------------------------"
+#done
+
+#rm -r tmp.$SAMPLE.UNMR.R*
+
+
+##################### KOMICS ASSEMBLE ALL READS DIFFERENT RUNS
+#SAMPLE=$PBS_JOBNAME
+#komics assemble --kmin 79 --kmax 139 --kstep 10 $SAMPLE.ALLR.R1 $SAMPLE.all.reads1.trimmed.fq.gz $SAMPLE.all.reads2.trimmed.fq.gz
+#komics assemble --kmin 99 --kmax 119 --kstep 10 $SAMPLE.ALLR.R2 $SAMPLE.all.reads1.trimmed.fq.gz $SAMPLE.all.reads2.trimmed.fq.gz
+
+##################### KOMICS CIRCULARIZE ALL READS DIFFERENT RUNS
+#komics circularize $SAMPLE.ALLR.R1 tmp.$SAMPLE.ALLR.R1.csb3contigs.fasta
+#komics circularize $SAMPLE.ALLR.R2 tmp.$SAMPLE.ALLR.R2.csb3contigs.fasta
+
+##################### KOMICS POLISH ALL READS DIFFERENT RUNS
+#komics polish --minidentity 97 $SAMPLE.ALLR.R1 tmp.$SAMPLE.ALLR.R1.circularized.fasta
+#komics polish --minidentity 97 $SAMPLE.ALLR.R2 tmp.$SAMPLE.ALLR.R2.circularized.fasta
+
+#echo "=========================================================================================="
+
+#for i in $SAMPLE.ALLR.R*.mini*
+#do
+#        echo $i
+#        echo "---------------------------------------------"
+#        echo "Number of minicircles: $(grep -c '>' $i)"
+#        echo "Number of circularized minicircles: $(grep -c '_circularized' $i)"
+#        echo "---------------------------------------------"
+#done
+
+#rm -r tmp.$SAMPLE.ALLR.R*
+
+
+##################### CONCATENATE ALL RUNS
+#echo "Sample name: "
+#read SAMPLE
+#cat $SAMPLE.*R.R*.mini* > $SAMPLE.minicircles.diffR.fasta
+#grep '>' $SAMPLE.minicircles.diffR.fasta > $SAMPLE.length.minicircles.diffR.txt
+#grep '_circularized' $SAMPLE.minicircles.diffR.fasta > $SAMPLE.length.circ.minicircles.diffR.txt
+
+
+
+
+##################### KOMICS ON ALL BGI SAMPLE WITH 1 SET OF PARAMETERS
+#SAMPLE=$PBS_JOBNAME
+#komics assemble --kmin 99 --kmax 119 --kstep 10 $SAMPLE $SAMPLE.reads1.trimmed.fq.gz $SAMPLE.reads2.trimmed.fq.gz
+#komics circularize $SAMPLE tmp.$SAMPLE.csb3contigs.fasta
+#komics polish --minidentity 97 $SAMPLE tmp.$SAMPLE.circularized.fasta
+
+#for i in $SAMPLE.mini*
+#do
+#        echo $i
+#        echo "---------------------------------------------"
+#        echo "Number of minicircles: $(grep -c '>' $i)"
+#        echo "Number of circularized minicircles: $(grep -c '_circularized' $i)"
+#        echo "---------------------------------------------"
+#done
+
+#rm -r tmp.$SAMPLE.*
+
+
+##################### CONCATENATE ALL RUNS
+#cat $SAMPLE.mini* > all.minicircles.fasta
+
+
+##################### VSEARCH
+#vsearch --cluster_fast all.minicircles.fasta --id 0.70 --uc all.minicircles.70.uc
+#vsearch --cluster_fast all.minicircles.fasta --id 0.80 --uc all.minicircles.80.uc
+#vsearch --cluster_fast all.minicircles.fasta --id 0.90 --uc all.minicircles.90.uc
+#vsearch --cluster_fast all.minicircles.fasta --id 0.95 --uc all.minicircles.95.uc
+#vsearch --cluster_fast all.minicircles.fasta --id 0.96 --uc all.minicircles.96.uc
+#vsearch --cluster_fast all.minicircles.fasta --id 0.97 --uc all.minicircles.97.uc
+#vsearch --cluster_fast all.minicircles.fasta --id 0.98 --uc all.minicircles.98.uc
+#vsearch --cluster_fast all.minicircles.fasta --id 0.99 --uc all.minicircles.99.uc
+#vsearch --cluster_fast all.minicircles.fasta --id 1 --uc all.minicircles.100.uc
+
+
+##################### MAXICIRCLES 
+#SAMPLE=$PBS_JOBNAME
+#komics assemble --kmin 19 --kmax 139 --kstep 20 $SAMPLE $SAMPLE.reads1.trimmed.fq.gz $SAMPLE.reads2.trimmed.fq.gz
+

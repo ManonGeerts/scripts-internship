@@ -1,0 +1,93 @@
+#!/bin/bash
+
+#PBS -N cat
+#PBS -L tasks=1:lprocs=1:memory=10gb
+#PBS -l walltime=48:00:00
+
+cd "$PBS_O_WORKDIR"
+
+SCRATCH='/scratch/antwerpen/206/vsc20612'
+#SAMPLE="108AT"
+SAMPLE=$PBS_JOBNAME
+reads1=$reads\_1.fq.gz
+reads2=$reads\_2.fq.gz
+
+REF="$SCRATCH/reference_genome/TriTrypDB-46_TbruceiTREU927_Genome.fasta"
+INDEX="$SCRATCH/reference_genome/TbruceiTREU927"
+READS1="$SCRATCH/raw_data/$SAMPLE/$reads1"
+READS2="$SCRATCH/raw_data/$SAMPLE/$reads2"
+
+
+##### CONCATENATE FILES (illumina) 
+
+#cd ./raw_data/$SAMPLE
+#zcat *_R1_* | gzip > KP33_clone_16_ACAGTG_L001_R1.fastq.gz
+#zcat *_R2_* | gzip > KP33_clone_16_ACAGTG_L001_R2.fastq.gz
+#cd $SCRATCH 
+
+
+##### LOAD MODULES
+ 
+module load SMALT
+module load SAMtools
+module load GATK
+module load BLAST+
+module load MEGAHIT
+module load VSEARCH
+
+
+##### GENERATE A HASH INDEX FOR THE REFERENCE GENOME 
+
+#cd reference_genome/ 
+#smalt index -k 13 -s 2 TbruceiTREU927 TriTrypDB-46_TbruceiTREU927_Genome.fasta  
+#cd $SCRATCH
+
+
+#### MAP FILE TO REFERENCE GENOME
+
+#smalt map -i 1500 -y 0.80 -x -r 0 -n 8 -o ./mapped_data/$SAMPLE.sam $INDEX $READS1 $READS2
+
+
+##### CONVERT TO BAM FILES AND SORT
+
+#cd ./mapped_data
+#samtools sort -O bam -@ 8 -o $SAMPLE.sorted.bam $SAMPLE.sam
+#rm $SAMPLE.sam
+#cd ./mapped_data/depth.files
+#samtools depth -a $SAMPLE.sorted.bam | gzip > $SAMPLE.sorted.depth.gz
+#samtools depth -a -q 25 -Q 25 $SAMPLE.sorted.bam | gzip > $SAMPLE.sorted.depth.Q25.gz
+#cd $SCRATCH
+
+
+##### ADD READ GROUPS AND MARK DUPLICATES
+
+BGI="DP8400009737BLL1"
+
+#PUDEF=$(gzip -cd $READS1 | head -n1 - | awk -F ":" '{print $3 "." $4}' -)
+
+#gatk AddOrReplaceReadGroups -I ./mapped_data/$SAMPLE.sorted.bam -O ./SNP_calling/$SAMPLE.sorted.RG.bam -ID $BGI -PL BGI -LB $SAMPLE -SM $SAMPLE -PU $BGI
+#gatk MarkDuplicates -I ./SNP_calling/$SAMPLE.sorted.RG.bam -O ./SNP_calling/$SAMPLE.markdup.bam -M ./SNP_calling/$SAMPLE.markdup.metrics.txt --READ_NAME_REGEX=null
+
+
+##### CREATE INDEX OF SAMPLE FILES 
+
+#samtools index -@ 8 ./SNP_calling/$SAMPLE.markdup.bam
+#rm ./SNP_calling/$SAMPLE.sorted.RG.bam
+
+
+##### RUN HAPLOTYPECALLER
+
+#gatk HaplotypeCaller -R $REF -I ./SNP_calling/$SAMPLE.markdup.bam -ERC GVCF -O ./SNP_calling/$SAMPLE.g.vcf.gz -bamout ./SNP_calling/$SAMPLE.vcf.bam
+
+#find $SCRATCH/SNP_calling/ -name "*g.vcf.gz" > input.list
+gatk CombineGVCFs -R $REF --variant input.list -O $SCRATCH/SNP_calling/combined.g.vcf.gz
+
+gatk GenotypeGVCFs -R $REF --V $SCRATCH/SNP_calling/combined.g.vcf.gz -O $SCRATCH/SNP_calling/combined.genotyped.vcf
+
+gatk SelectVariants -R $REF -V $SCRATCH/SNP_calling/combined.genotyped.vcf -select-type SNP -O $SCRATCH/SNP_calling/combined.genotyped.SNP.vcf
+
+gatk VariantFiltration -R $REF -V $SCRATCH/SNP_calling/combined.genotyped.SNP.vcf --filter-expression 'QUAL<500' --filter-name \
+       'LowQual' --filter-expression 'DP<5' --filter-name 'LowDepth' \
+        --filter-name 'FAIL' --filter-expression 'QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0' \
+        --cluster-window-size 10 -O $SCRATCH/SNP_calling/combined.genotyped.SNP.filtered.vcf
+

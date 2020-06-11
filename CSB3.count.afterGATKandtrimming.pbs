@@ -1,0 +1,34 @@
+#!/bin/bash
+
+#PBS -N cat
+#PBS -L tasks=1:lprocs=1:memory=10gb
+#PBS -l walltime=02:00:00
+
+cd "$PBS_O_WORKDIR"
+
+module load SAMtools
+
+
+echo "Enter sample name: "
+read SAMPLE
+
+seq="GGGGTTGGTGT|ACACCAACCCC|GGGGTTGATGT|ACATCAACCCC"
+echo '------------------------------------------------------'                
+echo $SAMPLE                                                              
+echo '------------------------------------------------------'
+
+echo -e "\n"
+CSB3=$(samtools view $SAMPLE.unmapped.reads.bam | egrep -c $seq)
+echo "Total number of unmapped reads with CSB3 region before SamToFastq: $CSB3"
+R1_BT=$(gzip -cd $SAMPLE.reads1.fq.gz | egrep -c $seq)
+R2_BT=$(gzip -cd $SAMPLE.reads2.fq.gz | egrep -c $seq)
+TR_BT=$((R1_BT + R2_BT))
+echo "Total number of reads left after SamToFastq: $R1_BT + $R2_BT =  $TR_BT"
+R1_AT=$(gzip -cd $SAMPLE.reads1.trimmed.*.fq.gz | egrep -c $seq)
+R2_AT=$(gzip -cd $SAMPLE.reads2.trimmed.*.fq.gz | egrep -c $seq)
+TR_AT=$((R1_AT + R2_AT))
+echo "Total number of reads left after trimming: $R1_AT + $R2_AT = $TR_AT"
+
+echo $SAMPLE "lost_after_bamtofastq" $((CSB3-TR_BT)) >> CSB.count.aftershit.txt 
+echo $SAMPLE "lost_after_trimming" $((TR_BT-TR_AT)) >> CSB.count.aftershit.txt
+echo $SAMPLE  "left" $TR_AT >> CSB.count.aftershit.txt

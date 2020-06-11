@@ -1,0 +1,67 @@
+#!/bin/bash
+
+#PBS -N cat
+#PBS -L tasks=1:lprocs=1:memory=10gb
+#PBS -l walltime=02:00:00
+
+cd "$PBS_O_WORKDIR"
+
+module load SAMtools
+
+#for f in *.sorted.bam; do qsub -v inputfile=$f -N CSBCOUNT_$(echo ${f%%.*}) CSB3.count.pbs; done
+
+ls 
+echo "Inputfile: "
+read inputfile
+
+seq="GGGGTTGGTGT|ACACCAACCCC|GGGGTTGATGT|ACATCAACCCC"
+SAMPLE=$(echo ${inputfile%%.*})
+#echo '------------------------------------------------------' 
+#echo $SAMPLE
+#echo '------------------------------------------------------' 
+
+#echo -e "\nMapped reads\n" 
+#MR=$(samtools view -c -F 4 $inputfile) 
+#echo "Number of mapped reads: $MR" 
+#MR_CSB3=$(samtools view -F 4 $inputfile | egrep -c $seq) 
+#echo "Number of mapped reads having CSB3 region: $MR_CSB3"
+#MR_CSB3_MQ60=$(samtools view -q 60 -F 4 $inputfile | egrep -c $seq) 
+#echo "Number of mapped reads having CBS3 region with a mapping quality > 60: $MR_CSB3_MQ60" 
+
+#echo -e "\nUnmapped reads\n" 
+#UNMR=$(samtools view -c -f 4 $inputfile) 
+#echo "Number of unmapped reads: $UNMR" 
+#UNMR_CSB3=$(samtools view -f 4 $inputfile | egrep -c $seq)
+#echo "Number of unmapped reads having CSB3 region: $UNMR_CSB3" 
+#UNMR_CSB3_MQ60=$(samtools view -q 60 -f 4 $inputfile | egrep -c $seq) 
+#echo "Number of unmapped reads having CBS3 region with a mapping quality >> 60: $UNMR_CSB3_MQ60"
+
+#echo $SAMPLE "MR_CSB3_MQ60" $MR_CSB3_MQ60 >> CSB.count.txt
+#echo $SAMPLE "MR_CSB3_LQ" $((MR_CSB3-MR_CSB3_MQ60)) >> CSB.count.txt
+#echo $SAMPLE "MR_without_CSB3" $((MR-MR_CSB3)) >> CSB.count.txt
+
+#echo $SAMPLE "UNMR_CSB3_MQ60" $UNMR_CSB3_MQ60 >> CSB.count.txt
+#echo $SAMPLE "UNMR_CSB3_LQ" $((UNMR_CSB3-UNMR_CSB3_MQ60)) >> CSB.count.txt
+#echo $SAMPLE "UNMR_without_CSB3" $((UNMR-UNMR_CSB3)) >> CSB.count.txt
+
+echo "Total reads..."
+
+TR=$(samtools view -c $inputfile)
+TR_CSB3=$(samtools view $inputfile | egrep -c $seq)
+TR_without_CSB3=$((TR-TR_CSB3))
+
+echo "Mapped reads..."
+
+MR=$(samtools view -c -F 4 $inputfile)
+MR_CSB3=$(samtools view -F 4 $inputfile | egrep -c $seq)
+MR_CSB3_Q60=$(samtools view -q 60 -F 4 $inputfile | egrep -c $seq)
+MR_without_CSB3=$((MR-MR_CSB3))
+
+echo "Unmapped reads..."
+
+UNMR=$(samtools view -c -f 4 $inputfile)
+UNMR_CSB3=$(samtools view -f 4 $inputfile | egrep -c $seq)
+UNMR_CSB3_Q60=$(samtools view -q 60 -f 4 $inputfile | egrep -c $seq)
+UNMR_without_CSB3=$((UNMR-UNMR_CSB3))
+
+echo $SAMPLE $TR $TR_CSB3 $TR_without_CSB3 $MR $MR_CSB3 $MR_CSB3_Q60 $MR_without_CSB3 $UNMR $UNMR_CSB3 $UNMR_CSB3_Q60 $UNMR_without_CSB3 >> results.table.CSB3.count.txt

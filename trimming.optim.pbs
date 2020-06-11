@@ -1,0 +1,73 @@
+module load SAMtools
+module load GATK
+module load fastp
+
+
+DIR="/scratch/antwerpen/206/vsc20612/raw_data/"
+ls $DIR
+
+echo "Enter sample to analyse: "
+read SAMPLE
+
+echo "SAMPLE: $SAMPLE" >> blah.txt
+
+echo "@943 	@HWI	@DP8"
+echo "Enter start of header of the fastq file: "
+read STARTHEADER
+
+DIR="/scratch/antwerpen/206/vsc20612/mapped_data/"
+f=$(echo $SAMPLE.sorted.bam)
+
+
+######## EXTRACT UNMAPPED READS
+echo "Exctracting unmapped reads..."
+#samtools view -b -f 4 -o $SAMPLE.unmapped.reads.bam $DIR$f
+UNMR=$(samtools view -c $SAMPLE.unmapped.reads.bam)
+echo "---------------------------------------------------" >> blah.txt
+echo "Number of unmapped reads: $UNMR" >> blah.txt
+echo "---------------------------------------------------" >> blah.txt
+
+
+######## CONVERT FROM BAM TO FQ
+echo "Convert from bam to fq..."
+#gatk SamToFastq -I $SAMPLE.unmapped.reads.bam -F $SAMPLE.reads1.fq.gz -F2 $SAMPLE.reads2.fq.gz
+
+R1_BT=$(gzip -cd $SAMPLE.reads1.fq.gz | grep -c $STARTHEADER)
+R2_BT=$(gzip -cd $SAMPLE.reads2.fq.gz | grep -c $STARTHEADER)
+TR_BT=$((R1_BT+R2_BT))
+echo "---------------------------------------------------" >> blah.txt
+echo "Number of reads1 before trimming: $R1_BT" >> blah.txt
+echo "Number of reads2 before trimming: $R2_BT" >> blah.txt
+echo "Total number of reads before trimming: $TR_BT" >> blah.txt
+echo "---------------------------------------------------" >> blah.txt
+
+
+######## TRIMMING
+echo "Enter mapping quality: "
+read MQ
+echo "Enter minimum length of read: "
+read MINLEN
+echo "Enter maximum length of read: "
+read MAXLEN
+
+fastp -i $SAMPLE.reads1.fq.gz -I $SAMPLE.reads2.fq.gz \
+                -o $SAMPLE.reads1.trimmed.$MQ$MINLEN$MAXLEN.fq.gz -O $SAMPLE.reads2.trimmed.$MQ$MINLEN$MAXLEN.fq.gz \
+                -q $MQ -u 10 -5 -3 -W 1 -M 30 --cut_right --cut_right_window_size 10 --cut_right_mean_quality 30 -l $MINLEN -b $MAXLEN
+R1_AT=$(gzip -cd $SAMPLE.reads1.trimmed.$MQ$MINLEN$MAXLEN.fq.gz | grep -c $STARTHEADER)
+R2_AT=$(gzip -cd $SAMPLE.reads2.trimmed.$MQ$MINLEN$MAXLEN.fq.gz | grep -c $STARTHEADER)
+TR_AT=$((R1_AT+R2_AT))
+echo "---------------------------------------------------" >> blah.txt
+echo "Mapping quality = $MQ; Minimum length = $MINLEN; Maximum length = $MAXLEN" >> blah.txt
+echo "Number of reads1 after trimming: $R1_AT" >> blah.txt
+echo "Number of reads2 after trimming: $R2_AT" >> blah.txt
+echo "Total number of reads after trimming: $TR_AT" >> blah.txt
+echo "---------------------------------------------------" >> blah.txt
+
+
+######## SUMMARY
+lostafterbamtofastq=$((UNMR-TR_BT))
+lostaftertrimming=$((TR_BT-TR_AT))
+left=$((UNMR-lostafterbamtofastq-lostaftertrimming))
+echo $SAMPLE.$MQ.$MINLEN.$MAXLEN "lost_after_bamtofastq" $lostafterbamtofastq >> trimming.optim.txt
+echo $SAMPLE.$MQ.$MINLEN.$MAXLEN "lost_after_trimming" $lostaftertrimming >> trimming.optim.txt
+echo $SAMPLE.$MQ.$MINLEN.$MAXLEN "left" $left >> trimming.optim.txt

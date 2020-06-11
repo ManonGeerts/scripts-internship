@@ -1,0 +1,64 @@
+1. PASS: grep '^#\|PASS' ... | bgzip outputfile.gz
+
+2. PASS.NOMISSING: -v '\./\.:' ... | bgzip outputfile.gz
+
+3. 012: VCFtools --gzvcf --012 --out
+
+4. PASS.NOMISSING.BI: VCFtools --min-alleles 2 --max-alleles 2 ... | bgzip outputfile.gz 
+	of bcftools view -m 2 -M 2 
+
+5. fasta script 
+
+6. splitstree
+
+7. subset: bcftools view -a -S Tgambiense .PASS.NOMISSING | bgzip > outputfile PASS.NOMISSING.GAMBIENSE
+	-S in Tgambiense 
+	-a hercoderen: als snip niet meer bestaat in deze subset -> . 
+
+8. bcftool view -m 2 M 2 -i 'ALT!="."'... >  PASS.NOMISSING.GAMBIENSE.VAR
+	-i 'ALT!="."' include de sites die niet gelijk zijn aan . 
+
+9. fasta file op subset 135000 SNPs 
+
+10. splitstree 
+
+
+
+
+
+grep -vc '^#' combined.genotyped.SNP.filtered.vcf
+1625356
+grep -c 'PASS' combined.genotyped.SNP.filtered.vcf
+395804
+grep '^#\|PASS' combined.genotyped.SNP.filtered.vcf | gzip > combined.genotyped.SNP.filtered.PASS.vcf.gz
+gzip -cd combined.genotyped.SNP.filtered.PASS.vcf.gz | grep -c 'PASS'
+395804
+gzip -cd combined.genotyped.SNP.filtered.PASS.vcf.gz | grep -cv '\./\.:'
+325792
+gzip -cd combined.genotyped.SNP.filtered.PASS.vcf.gz | grep -v '\./\.:' | gzip > combined.genotyped.SNP.filtered.PASS.NOMISSING.vcf.gz
+gzip -cd combined.genotyped.SNP.filtered.PASS.NOMISSING.vcf.gz | grep -cv '^#'
+325617
+bcftools view -m 2 -M 2 combined.genotyped.SNP.filtered.PASS.NOMISSING.vcf.gz | gzip > combined.genotyped.SNP.filtered.PASS.NOMISSING.BI.vcf.gz
+gzip -cd combined.genotyped.SNP.filtered.PASS.NOMISSING.BI.vcf.gz | grep -cv "^#"
+315989
+./vcf2fasta.py combined.genotyped.SNP.filtered.PASS.NOMISSING.BI.vcf.gz
+
+
+bcftools view -a -S Tbg.txt combined.genotyped.SNP.filtered.PASS.NOMISSING.vcf.gz | gzip > combined.genotyped.SNP.filtered.PASS.NOMISSING.Tbg.vcf.gz
+gzip -cd combined.genotyped.SNP.filtered.PASS.NOMISSING.Tbg.vcf.gz | grep -vc '^#'
+325617
+bcftools view -m 2 -M 2 -i 'ALT!="."' combined.genotyped.SNP.filtered.PASS.NOMISSING.Tbg.vcf.gz | gzip > combined.genotyped.SNP.filtered.PASS.NOMISSING.Tbg.VAR.vcf.gz
+gzip -cd combined.genotyped.SNP.filtered.PASS.NOMISSING.Tbg.VAR.vcf.gz | grep -vc '^#'
+137479
+bcftools view -a -S TbgII.txt combined.genotyped.SNP.filtered.PASS.NOMISSING.vcf.gz | gzip > combined.genotyped.SNP.filtered.PASS.NOMISSING.TbgII.vcf.gz
+gzip -cd combined.genotyped.SNP.filtered.PASS.NOMISSING.TbgII.VAR.vcf.gz | grep -vc '^#'
+135310
+
+
+
+
+
+
+
+
+
