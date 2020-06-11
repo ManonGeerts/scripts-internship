@@ -13,7 +13,7 @@ bash script used for SNP filtering
 ### calculate.VAR.SNPS.sh
 bash script used for SNP filtering
 ### VCFplay.R
-R script uses for analyzing of SNP and SNP variation distribution 
+R script used for analysis of SNP and SNP variation distribution 
 
 ### maxi.vcf.pbs
 bash script used for mapping and SNP calling of maxicircles 
