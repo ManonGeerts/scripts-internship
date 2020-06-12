@@ -834,76 +834,53 @@ g <- ggplot(pca2.r, aes(x=rotation.PC1, y=rotation.PC2, col=V39, fill=V39, shape
   stat_ellipse() + geom_text_repel(label=ifelse(rownames(pca2.r)%in%subset, rownames(pca2.r),''),vjust=2)
 g;dev.off()
 
+##------------------------------------------------------------------------------------------------------------
+## MC read depth
+##------------------------------------------------------------------------------------------------------------
 
 
 
+setwd("C:/Users/mgeerts/Dropbox/Gambiense/Foefelare Manon/komics/minicircles/read depth")
 
+RD <- matrix(ncol=2)
+colnames(RD) <- c("CONTIG","MEDIAN.DEPTH")
 
+files <- list.files(pattern ='.txt')
+for (n in 1:length(files)) {
+  tmp.RD <- read.csv(files[n], sep=' ', header=T)
+  RD <- rbind(RD,tmp.RD[,c(1,3)])
+}
+RD <- RD[-1,]
+RD[,3] <- gsub("_contig.*","",RD$CONTIG)
+RD[which(RD$V3%in%Tbg),4] <- "Tbg (n=18)"; RD[which(RD$V3%in%TbgII),4] <- "Tbg II (n=3)"
+RD[which(RD$V3%in%Tbr),4] <- "Tbr (n=4)"; RD[which(RD$V3%in%Tbb),4] <- "Tbb (n=7)"
+RD[which(RD$V3%in%uncertain),4] <- "uncertain (n=6)"
 
-
-
-
-setwd('C:/Users/mgeerts/Dropbox/Gambiense/Foefelare Manon/komics/')
-
-dim(clust_mat)
-
-clust_mat_melted <- melt(clust_mat) 
-clust_mat_melted[which(clust_mat_melted$Var2%in%Tbg),4] <- "Tbg (n=18)"; clust_mat_melted[which(clust_mat_melted$Var2%in%TbgII),4] <- "Tbg II (n=3)"
-clust_mat_melted[which(clust_mat_melted$Var2%in%Tbr),4] <- "Tbr (n=4)"; clust_mat_melted[which(clust_mat_melted$Var2%in%Tbb),4] <- "Tbb (n=7)"
-clust_mat_melted[which(clust_mat_melted$Var2%in%uncertain),4] <- "uncertain (n=6)"
-
-
-h <- ggplot(clust_mat_melted, aes(y=Var1, x=Var2, fill=value,color=value)) + 
-  geom_tile(show.legend = F) + xlab('') +
-  theme(axis.text.y = element_blank(), 
-        axis.text.x = element_text(size=8, angle = 90, hjust=1), strip.text.x = element_text(size=10)) +
-  facet_grid(. ~ clust_mat_melted$V4, space='free', scale='free') + ylab('MSC (n=3053)') 
+h <- ggplot(RD, aes(x=MEDIAN.DEPTH,fill=V4)) + geom_histogram(binwidth=10,alpha=0.8)
 h
-pdf("figures/heatmap clust_mat id97.pdf", useDingbats = F, width = 15);h; dev.off()
+h2 <- ggplot(RD, aes(x=MEDIAN.DEPTH,fill=V4)) + geom_histogram(binwidth=40,alpha=0.8) + 
+  facet_grid(V4 ~.)
+h2
+b <- ggplot(RD, aes(x=MEDIAN.DEPTH,y=V3,fill=V4,color=V4)) + geom_boxplot(alpha=0.5) + 
+  facet_grid(V4 ~.,scale='free', space = 'free') + ylab('') +
+  geom_text_repel(label=
+                    ifelse(gsub('_len.*','',RD$CONTIG) %in% list.MSC.spec,gsub('_len.*','',RD$CONTIG),''), color="gray30")
+#geom_text_repel(label=ifelse(RD$MEDIAN.DEPTH>5000,gsub('_len.*','',RD$CONTIG),''),size=4)   
+b
+pdf("C:/Users/mgeerts/Dropbox/Gambiense/Foefelare Manon/komics/figures/K.MC read depth.pdf", useDingbats = F, width = 15)
+h;h2;b;dev.off()
+
+list.MSC.spec <- c("Jua_contig1860","Jua_contig395","108AT_contig635",
+                   "108AT_contig721","15BT-relapse_contig1310","NDMI_contig3299")
+
+for (n in 1:18) {
+  h3 <- ggplot(RD[RD$V3==Tbg[n],], aes(x=MEDIAN.DEPTH,fill=V4)) + 
+    geom_histogram(binwidth=15,alpha=0.8, show.legend = F) + ggtitle(Tbg[n]) + 
+    theme(strip.text.y = element_text(angle=0))
+  pdf(paste("C:/Users/mgeerts/Dropbox/Gambiense/Foefelare Manon/komics/figures/",Tbg[n],".pdf",sep=''), useDingbats = F, width = 15)
+  h3;dev.off()
+}
 
 
-CA <- unique(as.character(species2$region))[1]
-Ca <- as.character(species2[which(species2$region==CA),1])
-WA <- unique(as.character(species2$region))[2]
-Wa <- as.character(species2[which(species2$region==WA),1])
-SH <- unique(as.character(species2$region))[5]
-Sh <- as.character(species2[which(species2$region==SH),1])
-
-length(clustnames)
-clust_mat_melted_tbg <- melt(clust_mat[clustnames,Tbg])
-
-species2[,c(1,4)]
-species2[which(species2$region==CA),1]
-species2[which(species2$region==WA),1]
 
 
-h <- ggplot(clust_mat_melted_tbg, aes(y=Var1, x=Var2, fill=value,color=value)) + 
-  geom_tile(show.legend = F) + xlab('') + ylab('MSC (n=184)') +
-  theme(axis.text.y = element_blank(), 
-        axis.text.x = element_text(size=8, angle = 90, hjust=1), strip.text.x = element_text(size=10)) +
-  facet_grid(. ~ clust_mat_melted_tbg$V5, space='free', scale='free')
-h
-qspdf("figures/heatmap clust_mat id97 per Tbg cluster.pdf", useDingbats = F, width = 15);h; dev.off()
-
-cluster1 <- c("OUSOU","ROUPO-VAVOUA--80-MURAZ-14","LiTat-1-5-P9")
-cluster2 <- c("NKOUA", "NDMI")
-cluster3 <- c("MHOM-SD-82-MUSIKIA-cloneA")
-cluster4 <- c("Nabe","Pakwa","Bosendja")
-cluster5 <- c("MBA","LOGRA")
-cluster6 <- c("108AT","108BT","57AT","348BT","15BT-relapse")
-cluster7 <- "Jua"
-cluster8 <- "BIM-AnTat-8-1-P8"
-cluster9 <- c(cluster1, cluster2,cluster3)
-clust_mat_melted_tbg[which(clust_mat_melted_tbg$Var2%in%Sh),4] <- "Sahel (n=1)" 
-clust_mat_melted_tbg[which(clust_mat_melted_tbg$Var2%in%Ca),4] <- "Central Africa (n=14)"
-clust_mat_melted_tbg[which(clust_mat_melted_tbg$Var2%in%Wa),4] <- "West Africa (n=3)"
-
-clust_mat_melted_tbg[which(clust_mat_melted_tbg$Var2%in%cluster1),5] <- "cluster 1 (WA)"
-clust_mat_melted_tbg[which(clust_mat_melted_tbg$Var2%in%cluster2),5] <- "cluster 2 (CB)"
-clust_mat_melted_tbg[which(clust_mat_melted_tbg$Var2%in%cluster3),5] <- "cluster 3 (Sudan)"
-clust_mat_melted_tbg[which(clust_mat_melted_tbg$Var2%in%cluster4),5] <- "cluster 4 (DRC)"
-clust_mat_melted_tbg[which(clust_mat_melted_tbg$Var2%in%cluster5),5] <- "cluster 5 (DRC)"
-clust_mat_melted_tbg[which(clust_mat_melted_tbg$Var2%in%cluster6),5] <- "cluster 6 (DRC)"
-clust_mat_melted_tbg[which(clust_mat_melted_tbg$Var2%in%cluster7),5] <- "cluster 7 (DRC)"
-clust_mat_melted_tbg[which(clust_mat_melted_tbg$Var2%in%cluster8),5] <- "cluster 8 (DRC)"
-clust_mat_melted_tbg[which(clust_mat_melted_tbg$Var2%in%cluster9),5] <- "cluster 9 (DRC/Sudan/CB)"
